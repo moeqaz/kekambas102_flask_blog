@@ -8,16 +8,17 @@ from app import db, login
 # CREATE TABLE user(id SERIAL PRIMARY KEY, email VARCHAR(50) UNIQUE NOT NULL, etc.)
 
 class User(db.Model, UserMixin):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True) 
     email = db.Column(db.String(50), nullable=False, unique=True)
     username = db.Column(db.String(50), nullable=False, unique=True)
     password = db.Column(db.String(256), nullable=False)
     date_created = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    posts = db.relationship('Post', backref='author', lazy='dynamic')
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Set the password to the hashed version of the password
-        self.set_password(kwargs.get('password', ''))
+        self.password = self.set_password(kwargs.get('password', ''))
         # Add and commit the new instance to the database
         db.session.add(self)
         db.session.commit()
@@ -26,7 +27,7 @@ class User(db.Model, UserMixin):
         return self.username
 
     def set_password(self, plain_password):
-        self.password = generate_password_hash(plain_password)
+        return generate_password_hash(plain_password)
 
     def check_password(self, password_guess):
         return check_password_hash(self.password, password_guess)
@@ -35,3 +36,37 @@ class User(db.Model, UserMixin):
 @login.user_loader
 def load_user(user_id):
     return User.query.get(user_id)
+
+
+# Create a Post Model - One to Many relationship with User (one user to many posts, one post to one user)
+
+class Post(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(50), nullable=False)
+    body = db.Column(db.String(255), nullable=False)
+    date_created = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id')) # SQL equivalent to FOREIGN KEY(user_id) REFERENCES user(id)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        db.session.add(self)
+        db.session.commit()
+
+    def __repr__(self):
+        return f"<Post {self.id} | {self.title}>"
+
+    # Update method for the Post object
+    def update(self, **kwargs):
+        # for each key value that comes in as a keyword argument
+        for key, value in kwargs.items():
+            # if the key is 'title' or 'body'
+            if key in {'title', 'body'}:
+                # Then we will set that attribute on the instance e.g. post.title = 'Updated Title'
+                setattr(self, key, value)
+        # Save the updates to the database
+        db.session.commit()
+
+    # Delete post from database
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
