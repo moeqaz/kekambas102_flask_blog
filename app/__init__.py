@@ -20,5 +20,9 @@ migrate = Migrate(app, db, render_as_batch=True)
 # Create an instance of LoginManager to let our app allow login capabilities
 login = LoginManager(app)
 
+# Import the API blueprint and register it with the flask application
+from app.blueprints.api import api
+app.register_blueprint(api)
+
 # import all of the routes and models from the routes and models module in the current folder
 from . import routes, models
