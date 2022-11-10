@@ -67,6 +67,8 @@ def create_user():
     email = data.get('email')
     username = data.get('username')
     password = data.get('password')
-    print(email, username, password)
+    check_user = User.query.filter( (User.username == username) | (User.email == email) ).first()
+    if check_user is not None:
+        return jsonify({'error': 'User with username and/or email already exists'}), 400
     new_user = User(email=email, username=username, password=password)
     return jsonify(new_user.to_dict()), 201
